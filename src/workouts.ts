@@ -98,7 +98,8 @@ function distStep(
   tLow: number | null = null,
   tHigh: number | null = null,
 ): WorkoutStep {
-  return execStep(order, typeKey, typeId, 'distance', 3, meters, 'meter', 2, tKey, tId, tLow, tHigh);
+  // Garmin expects distance in km with unitKey 'kilometer'
+  return execStep(order, typeKey, typeId, 'distance', 3, meters / 1000, 'kilometer', 2, tKey, tId, tLow, tHigh);
 }
 
 function repeatGroup(order: number, iterations: number, steps: WorkoutStep[]): WorkoutStep {
@@ -168,11 +169,12 @@ export function buildRunningWorkout(args: RunningWorkoutArgs): WorkoutPayload {
       ? { key: 'pace.zone', id: 6, low: 1000 / (args.intervalPaceMinPerKm * 1.1), high: 1000 / (args.intervalPaceMinPerKm * 0.9) }
       : { key: 'no.target', id: 1, low: null, high: null };
 
+    const groupOrder = order++;
     const iSteps: WorkoutStep[] = [
-      distStep(1, 'interval', 3, args.intervalDistanceMeters, paceTarget.key, paceTarget.id, paceTarget.low, paceTarget.high),
+      distStep(groupOrder, 'interval', 3, args.intervalDistanceMeters, paceTarget.key, paceTarget.id, paceTarget.low, paceTarget.high),
     ];
-    if (args.restSecs) iSteps.push(timeStep(2, 'recovery', 4, args.restSecs));
-    steps.push(repeatGroup(order++, args.intervals, iSteps));
+    if (args.restSecs) iSteps.push(timeStep(groupOrder + 1, 'recovery', 4, args.restSecs));
+    steps.push(repeatGroup(groupOrder, args.intervals, iSteps));
   }
 
   if (args.cooldownSecs) steps.push(timeStep(order++, 'cooldown', 2, args.cooldownSecs));
@@ -210,11 +212,12 @@ export function buildCyclingWorkout(args: CyclingWorkoutArgs): WorkoutPayload {
       ? { key: 'power.zone', id: 4, low: args.intervalPowerWatts * 0.95, high: args.intervalPowerWatts * 1.05 }
       : { key: 'no.target', id: 1, low: null, high: null };
 
+    const groupOrder = order++;
     const iSteps: WorkoutStep[] = [
-      timeStep(1, 'interval', 3, args.intervalSecs, powerTarget.key, powerTarget.id, powerTarget.low, powerTarget.high),
+      timeStep(groupOrder, 'interval', 3, args.intervalSecs, powerTarget.key, powerTarget.id, powerTarget.low, powerTarget.high),
     ];
-    if (args.restSecs) iSteps.push(timeStep(2, 'recovery', 4, args.restSecs));
-    steps.push(repeatGroup(order++, args.intervals, iSteps));
+    if (args.restSecs) iSteps.push(timeStep(groupOrder + 1, 'recovery', 4, args.restSecs));
+    steps.push(repeatGroup(groupOrder, args.intervals, iSteps));
   }
 
   if (args.cooldownSecs) steps.push(timeStep(order++, 'cooldown', 2, args.cooldownSecs));
